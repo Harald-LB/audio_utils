@@ -1,23 +1,23 @@
+use audio_utils::{DbToGain, TinySmoother};
 use nih_plug::prelude::*;
 use std::sync::Arc;
 
 struct TinyGainPlug {
     params: Arc<TinyGainParams>,
-    previous_gain: i32,
+    smoother: TinySmoother,
 }
 #[derive(Params)]
 struct TinyGainParams {
-    /// We make the gain parameter an integer between -100 and 20 dB.
+    /// We make the gain in decibels an integer between -60 and 20 dB.
     #[id = "gain"]
-    pub gain: IntParam,
+    pub gain_db: IntParam,
 }
-
 
 impl Default for TinyGainPlug {
     fn default() -> Self {
         Self {
             params: Arc::new(TinyGainParams::default()),
-            previous_gain: 0,
+            smoother: TinySmoother::default(),
         }
     }
 }
@@ -25,10 +25,7 @@ impl Default for TinyGainPlug {
 impl Default for TinyGainParams {
     fn default() -> Self {
         Self {
-            gain: IntParam::new(
-                "Gain",
-                0,
-                IntRange::Linear {min: -100, max: 20}, )
+            gain_db: IntParam::new("Gain", 0, IntRange::Linear { min: -60, max: 20 }),
         }
     }
 }
@@ -36,15 +33,10 @@ impl Default for TinyGainParams {
 impl Plugin for TinyGainPlug {
     const NAME: &'static str = "TinyGainPlug";
     const VENDOR: &'static str = "Harald-LB";
-    // You can use `env!("CARGO_PKG_HOMEPAGE")` to reference the homepage field from the
-    // `Cargo.toml` file here
     const URL: &'static str = "https://example.com/TinyGainPlug";
     const EMAIL: &'static str = "info@example.com";
-
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    // The first audio IO layout is used as the default. The other layouts may be selected either
-    // explicitly or automatically by the host or the user depending on the plugin API/backend.
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
         AudioIOLayout {
             main_input_channels: NonZeroU32::new(2),
@@ -52,10 +44,6 @@ impl Plugin for TinyGainPlug {
 
             aux_input_ports: &[],
             aux_output_ports: &[],
-
-            // Individual ports and the layout as a whole can be named here. By default these names
-            // are generated as needed. This layout will be called 'Stereo', while the other one is
-            // given the name 'Mono' based no the number of input and output channels.
             names: PortNames::const_default(),
         },
         AudioIOLayout {
@@ -64,31 +52,33 @@ impl Plugin for TinyGainPlug {
             ..AudioIOLayout::const_default()
         },
     ];
-    const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+    
+    // note: setting this to true will cause the audio processing cycle to be split into multiple 
+    // smaller chunks, often only 1 sample long.
+    const SAMPLE_ACCURATE_AUTOMATION: bool = false;
     type SysExMessage = ();
     type BackgroundTask = ();
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
     }
 
-    // This plugin doesn't need any special initialization, but if you need to do anything expensive
-    // then this would be the place. State is kept around when the host reconfigures the
-    // plugin. If we do need special initialization, we could implement the `initialize()` and/or
-    // `reset()` methods
-
     fn process(
         &mut self,
-        _buffer: &mut Buffer,
+        buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let gain_db = &self.params.gain.value();
-        if gain_db != &self.previous_gain {
-            nih_log!("Gain changed to {}", gain_db);
-            self.previous_gain = *gain_db;
-        }   
-        
-       // for channel_samples in buffer.iter_samples() {  }
+        //let gain_db = &self.params.gain_db.value();
+        let gain_abs = self.params.gain_db.value().to_gain();
+
+        for channel_samples in buffer.iter_samples() {
+            // using the TinySmoother to smooth the gain for each sample in all channels.
+            let gain_sample = self.smoother.next(gain_abs);
+
+            for sample in channel_samples {
+                *sample *= gain_sample;
+            }
+        }
 
         ProcessStatus::Normal
     }
