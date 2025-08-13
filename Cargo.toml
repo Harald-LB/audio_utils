@@ -18,5 +18,8 @@ codegen-units = 1   # better Optimizing, slower Builds
 debug = false
 incremental = false
 
-[profile.bench]
-inherits = "release"
+[workspace]
+members = [
+    "xtask",
+    "examples/tiny_gain_plug",
+]

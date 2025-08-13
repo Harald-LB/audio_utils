@@ -3,4 +3,11 @@ name = "tiny_gain_plug"
 version = "0.1.0"
 edition = "2024"
 
+# Library for VST3/CLAP
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug",  features = ["assert_process_allocs"] }
+parking_lot = "0.12.4"
+
