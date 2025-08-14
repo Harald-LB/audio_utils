@@ -18,7 +18,7 @@ impl Default for TinySmoother {
     ///
     /// The default configuration reaches 50% of the target value after approximately
     /// 500 samples, which corresponds to ~10ms at 48 kHz or ~11ms at 44.1 kHz.
-    /// 
+    ///
     /// The default configuration starts at 0.0 (silence).
     fn default() -> TinySmoother {
         // Beta calculation for 500-sample half-life:
@@ -41,7 +41,7 @@ impl TinySmoother {
     /// To calculate beta for a specific time constant:
     /// * For 50% at n samples: `beta = e^(-ln(2)/n)`
     /// * For 63.2% at n samples: `beta = e^(-1/n)`
-    /// 
+    ///
     /// * `start_value` - the value, the smoother should start from when reset (usually 0.0 or 1.0)
     pub fn new(beta: f64, start_value: f32) -> TinySmoother {
         TinySmoother {
@@ -70,7 +70,29 @@ impl TinySmoother {
         self.last_value = new_value;
         new_value as f32
     }
-    /// 
+    /// Resets the internal value of the smoother to its initial starting value.
+    ///
+    ///
+    /// # Example
+    /// ```
+    /// use audio_utils::TinySmoother;
+    ///
+    /// let mut smoother = TinySmoother::default();
+    /// // let it run for 500 samples
+    /// for _ in 0..500 {
+    ///     smoother.next(1.0);
+    /// }
+    /// // now the value should be close to 0.5
+    /// assert!( smoother.next(1.0) > 0.499);
+    ///
+    /// smoother.reset();
+    /// // after reset, the value should be close to 0.0
+    /// assert!(smoother.next(1.0) < 0.01);
+    /// ```
+    ///
+    /// # Notes
+    /// - Ensure that `start_value` is properly set before calling this method, as it
+    ///   directly determines the reset value.
     pub fn reset(&mut self) {
         self.last_value = self.start_value as f64;
     }
@@ -81,7 +103,6 @@ impl TinySmoother {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     // smoother -------------
     #[test]
@@ -165,5 +186,20 @@ mod tests {
             "Realtime factor: {:.0}x (could run ~{:.0} smoother in parallel)",
             realtime_factor, realtime_factor
         );
+    }
+
+    #[test]
+    fn smoother_can_be_reset() {
+        let mut smoother = TinySmoother::default();
+        // let it run for 500 samples
+        for _ in 0..500 {
+            smoother.next(1.0);
+        }
+        // now the value should be close to 0.5
+         assert!( smoother.next(1.0) > 0.499);
+
+        smoother.reset();
+        // after reset, the value should be close to 0.0
+        assert!(smoother.next(1.0) < 0.01);
     }
 }
