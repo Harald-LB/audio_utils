@@ -1,3 +1,8 @@
+//! This is the a simplified version of the gain plugin example from 
+//! the [NIH-plug](https://github.com/robbert-vdh/nih-plug) documentation.
+//! It shows the application of the audio_utils::{DbToGain, TinySmoother}
+//! 
+
 use audio_utils::{DbToGain, TinySmoother};
 use nih_plug::prelude::*;
 use std::sync::Arc;
@@ -61,6 +66,9 @@ impl Plugin for TinyGainPlug {
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
     }
+    fn reset(&mut self) {
+        self.smoother.reset();
+    }
 
     fn process(
         &mut self,
@@ -68,7 +76,7 @@ impl Plugin for TinyGainPlug {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        //let gain_db = &self.params.gain_db.value();
+       
         let gain_abs = self.params.gain_db.value().to_gain();
 
         for channel_samples in buffer.iter_samples() {

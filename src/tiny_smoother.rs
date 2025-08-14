@@ -44,6 +44,10 @@ impl TinySmoother {
     ///
     /// * `start_value` - the value, the smoother should start from when reset (usually 0.0 or 1.0)
     pub fn new(beta: f64, start_value: f32) -> TinySmoother {
+        assert!(beta >= 0.0 && beta < 1.0,
+                "Beta must be in range [0.0, 1.0), got {}", beta);
+        assert!(start_value.is_finite(),
+                "Start value must be finite, got {}", start_value);
         TinySmoother {
             last_value: start_value as f64,
             beta,
@@ -65,6 +69,9 @@ impl TinySmoother {
     /// let smoothed = smoother.next(1.0);  // Start transition to 1.0
     /// ```
     pub fn next(&mut self, target: f32) -> f32 {
+        if !target.is_finite() {
+            return self.last_value as f32;
+        }
         let target = target as f64;
         let new_value = target - self.beta * (target - self.last_value);
         self.last_value = new_value;

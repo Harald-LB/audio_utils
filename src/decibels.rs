@@ -194,9 +194,9 @@ const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) a
 /// assert_eq!(gain, 0.001);
 /// ```
 /// # Performance
-/// 
+///
 /// - The lookup table is about _6_ to _7_ times _faster_ than `powf()`
-/// - The lookup table has a realtime factor of __14,202__ at a sample rate of 48 kHz, 
+/// - The lookup table has a realtime factor of __14,202__ at a sample rate of 48 kHz,
 ///   meaning you can call it several thousand times per sample.
 ///
 #[inline(always)]
@@ -265,11 +265,14 @@ impl DbToGain for f32 {
     ///
     #[inline]
     fn to_gain(self) -> f32 {
+        if !self.is_finite() {
+            return 1.0; // Unity gain as a secure default
+        }
         db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
     }
 }
 impl DbToGain for f64 {
-    /// Converts a decibel value given as a f32 into a gain value.
+    /// Converts a decibel value given as a f64 into a gain value.
     ///
     /// Note:
     /// 1. The floating point value is truncated to the nearest integer, there is no interpolation.
@@ -287,6 +290,9 @@ impl DbToGain for f64 {
     ///
     #[inline]
     fn to_gain(self) -> f32 {
+        if !self.is_finite() {
+            return 1.0; // Unity gain as a secure default
+        }
         db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
     }
 }
@@ -316,7 +322,7 @@ impl DbToGain for f64 {
 /// assert_eq!(decibels, -60);
 /// ```
 /// # Performance
-/// 
+///
 /// To be honest, the performance of `gain_to_db` is not better than `log10()` even on a small
 /// system. But it still might be useful where you need the round-trip stability of
 /// `gain_to_db(db_to_gain(given_db))`.
@@ -386,6 +392,9 @@ impl GainToDb for f32 {
     ///
     #[inline]
     fn to_db(self) -> i32 {
+        if !self.is_finite() {
+            return -100; // Minimum as a secure default
+        }
         gain_to_db(self)
     }
 }
@@ -405,6 +414,9 @@ impl GainToDb for f64 {
     ///
     #[inline]
     fn to_db(self) -> i32 {
+        if !self.is_finite() {
+            return -100; // Minimum as a secure default
+        }
         gain_to_db(self as f32)
     }
 }
