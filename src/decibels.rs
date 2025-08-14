@@ -449,6 +449,85 @@ mod tests {
         assert_eq!(db_to_gain(-101), 1.0000000e-05);
         assert!(db_to_gain(28) > 20.0);
     }
+    
+    //--- Edge case tests for DbToGain trait
+    #[test]
+    fn db_to_gain_handles_nan_f32() {
+        let nan_db = f32::NAN;
+        let result = nan_db.to_gain();
+        assert_eq!(result, 1.0); // Should return unity gain
+    }
+
+    #[test]
+    fn db_to_gain_handles_infinity_f32() {
+        let inf_db = f32::INFINITY;
+        let neg_inf_db = f32::NEG_INFINITY;
+        assert_eq!(inf_db.to_gain(), 1.0); // Should return unity gain
+        assert_eq!(neg_inf_db.to_gain(), 1.0); // Should return unity gain
+    }
+
+    #[test]
+    fn db_to_gain_handles_nan_f64() {
+        let nan_db = f64::NAN;
+        let result = nan_db.to_gain();
+        assert_eq!(result, 1.0); // Should return unity gain
+    }
+
+    #[test]
+    fn db_to_gain_handles_infinity_f64() {
+        let inf_db = f64::INFINITY;
+        let neg_inf_db = f64::NEG_INFINITY;
+        assert_eq!(inf_db.to_gain(), 1.0); // Should return unity gain
+        assert_eq!(neg_inf_db.to_gain(), 1.0); // Should return unity gain
+    }
+
+    //--- Edge case tests for GainToDb trait
+    #[test]
+    fn gain_to_db_handles_nan_f32() {
+        let nan_gain = f32::NAN;
+        let result = nan_gain.to_db();
+        assert_eq!(result, -100); // Should return minimum dB
+    }
+
+    #[test]
+    fn gain_to_db_handles_infinity_f32() {
+        let inf_gain = f32::INFINITY;
+        let result = inf_gain.to_db();
+        assert_eq!(result, -100); // Should return minimum dB (because infinity.is_finite() is false)
+    }
+
+    #[test]
+    fn gain_to_db_handles_zero() {
+        let zero_gain = 0.0f32;
+        let result = zero_gain.to_db();
+        assert_eq!(result, -100); // Should clamp to the minimum
+    }
+
+    #[test]
+    fn gain_to_db_handles_negative_gains() {
+        // Test that negative gains are treated the same as positive (due to abs())
+        let positive = 0.5f32;
+        let negative = -0.5f32;
+        assert_eq!(positive.to_db(), negative.to_db());
+
+        // Test specific value
+        assert_eq!((-1.0f32).to_db(), 0); // -1.0 has the same magnitude as 1.0 -> 0 dB
+    }
+
+    #[test]
+    fn gain_to_db_handles_nan_f64() {
+        let nan_gain = f64::NAN;
+        let result = nan_gain.to_db();
+        assert_eq!(result, -100); // Should return minimum dB
+    }
+
+    #[test]
+    fn gain_to_db_handles_infinity_f64() {
+        let inf_gain = f64::INFINITY;
+        let result = inf_gain.to_db();
+        assert_eq!(result, -100); // Should return minimum dB
+    }
+    
 
     #[test]
     fn db_to_gain_is_performant() {

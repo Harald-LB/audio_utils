@@ -44,10 +44,16 @@ impl TinySmoother {
     ///
     /// * `start_value` - the value, the smoother should start from when reset (usually 0.0 or 1.0)
     pub fn new(beta: f64, start_value: f32) -> TinySmoother {
-        assert!(beta >= 0.0 && beta < 1.0,
-                "Beta must be in range [0.0, 1.0), got {}", beta);
-        assert!(start_value.is_finite(),
-                "Start value must be finite, got {}", start_value);
+        assert!(
+            beta >= 0.0 && beta < 1.0,
+            "Beta must be in range [0.0, 1.0), got {}",
+            beta
+        );
+        assert!(
+            start_value.is_finite(),
+            "Start value must be finite, got {}",
+            start_value
+        );
         TinySmoother {
             last_value: start_value as f64,
             beta,
@@ -203,10 +209,124 @@ mod tests {
             smoother.next(1.0);
         }
         // now the value should be close to 0.5
-         assert!( smoother.next(1.0) > 0.499);
+        assert!(smoother.next(1.0) > 0.499);
 
         smoother.reset();
         // after reset, the value should be close to 0.0
         assert!(smoother.next(1.0) < 0.01);
+    }
+
+    //--- Edge case tests
+    #[test]
+    fn smoother_handles_beta_zero() {
+        let mut smoother = TinySmoother::new(0.0, 0.0);
+        // Beta = 0 should mean instant response (no smoothing)
+        assert_eq!(smoother.next(1.0), 1.0);
+        assert_eq!(smoother.next(0.5), 0.5);
+        assert_eq!(smoother.next(-1.0), -1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Beta must be in range [0.0, 1.0)")]
+    fn smoother_panics_on_beta_one() {
+        let _smoother = TinySmoother::new(1.0, 0.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Beta must be in range [0.0, 1.0)")]
+    fn smoother_panics_on_beta_greater_than_one() {
+        let _smoother = TinySmoother::new(1.5, 0.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Beta must be in range [0.0, 1.0)")]
+    fn smoother_panics_on_negative_beta() {
+        let _smoother = TinySmoother::new(-0.5, 0.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Start value must be finite")]
+    fn smoother_panics_on_nan_start_value() {
+        let _smoother = TinySmoother::new(0.5, f32::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "Start value must be finite")]
+    fn smoother_panics_on_infinite_start_value() {
+        let _smoother = TinySmoother::new(0.5, f32::INFINITY);
+    }
+
+    #[test]
+    fn smoother_handles_nan_target() {
+        let mut smoother = TinySmoother::new(0.5, 0.5);
+        // Process a few normal values first
+        smoother.next(1.0);
+        let last_valid = smoother.next(1.0);
+
+        // NaN should return the last valid value
+        let result = smoother.next(f32::NAN);
+        assert_eq!(result, last_valid);
+
+        // Processing should continue normally after NaN
+        let continued = smoother.next(1.0);
+        assert!(continued >= last_valid); // Should continue from where it was
+    }
+
+    #[test]
+    fn smoother_handles_infinity_target() {
+        let mut smoother = TinySmoother::new(0.5, 0.5);
+        // Process a normal value first
+        smoother.next(1.0);
+        let last_valid = smoother.next(1.0);
+
+        // Infinity should return the last valid value
+        let result_pos_inf = smoother.next(f32::INFINITY);
+        assert_eq!(result_pos_inf, last_valid);
+
+        let result_neg_inf = smoother.next(f32::NEG_INFINITY);
+        assert_eq!(result_neg_inf, last_valid);
+
+        // Processing should continue normally after infinity
+        let continued = smoother.next(1.0);
+        assert!(continued >= last_valid); // Should continue from where it was
+    }
+
+    #[test]
+    fn smoother_reset_works_with_different_start_values() {
+        // Test with a positive start value
+        let mut smoother = TinySmoother::new(0.9, 2.0);
+        for _ in 0..100 {
+            smoother.next(10.0);
+        }
+        smoother.reset();
+        let after_reset = smoother.next(3.5);
+        assert!(after_reset < 3.0); // Should be close to the start value of 2.0
+
+        // Test with a negative start value
+        let mut smoother_neg = TinySmoother::new(0.9, -2.0);
+        for _ in 0..100 {
+            smoother_neg.next(10.0);
+        }
+        smoother_neg.reset();
+        let after_reset_neg = smoother_neg.next(5.0);
+        assert!(after_reset_neg < -1.0); // Should be close to the start value of -2.0
+    }
+
+    #[test]
+    fn smoother_extreme_value_transitions() {
+        let mut smoother = TinySmoother::new(0.1, 0.0); // Fast smoothing
+
+        // Test large positive to large negative transition
+        for _ in 0..50 {
+            smoother.next(1e6);
+        }
+        let high_value = smoother.next(1e6);
+        assert!(high_value > 1e5); // Should be close to target
+
+        for _ in 0..50 {
+            smoother.next(-1e6);
+        }
+        let low_value = smoother.next(-1e6);
+        assert!(low_value < -1e5); // Should be close to new target
     }
 }
