@@ -1,3 +1,18 @@
+//! Utilities for working with decibels (dB) and linear gains (gain).
+//!
+//! This module provides functions for converting between decibels (dB) and linear gains (gain).
+//!
+//! # Examples
+//!
+//! ```
+//! use audio_utils::DbToGain;
+//!
+//! let decibels:i32 = -60;
+//! let gain = decibels.to_gain();
+//! ```
+
+
+
 /// A static lookup table mapping integer decibel values in the range -100 to +27 dB
 /// to corresponding linear gain values (f32). The step size is exactly 1 dB,
 /// which is below the just noticeable difference (JND) for loudness at typical
@@ -178,6 +193,11 @@ const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) a
 ///
 /// assert_eq!(gain, 0.001);
 /// ```
+/// # Performance
+/// 
+/// - The lookup table is about _6_ to _7_ times _faster_ than `powf()`
+/// - The lookup table has a realtime factor of __14,202__ at a sample rate of 48 kHz, 
+///   meaning you can call it several thousand times per sample.
 ///
 #[inline(always)]
 pub fn db_to_gain(db: i32) -> f32 {
@@ -275,12 +295,12 @@ impl DbToGain for f64 {
 /// Performs a binary search on the same precomputed `DB_GAIN_LOOKUP` table used by `db_to_gain()`.
 ///
 /// This function guarantees that `gain_to_db(db_to_gain(given_db))` yields the `given_db` value
-/// (the round trip is stable).
+/// (it is round trip is stable).
 ///
 /// # Arguments
 ///
 /// * `gain` - A linear gain value (f32). Values below the minimum map to -100 dB. Values above
-///            22.4 map to +27 dB.
+///            maximum map to +27 dB.
 ///
 /// # Returns
 ///
@@ -295,7 +315,16 @@ impl DbToGain for f64 {
 ///
 /// assert_eq!(decibels, -60);
 /// ```
-
+/// # Performance
+/// 
+/// To be honest, the performance of `gain_to_db` is not better than `log10()` even on a small
+/// system. But it still might be useful where you need the round-trip stability of
+/// `gain_to_db(db_to_gain(given_db))`.
+///
+/// - The lookup table iteration is about _1.26_ times _faster_ than `log10()`
+/// - The lookup table iteration has a realtime factor of __1865__ at a sample rate of 48 kHz, on a
+///   small Intel® Core™ i5-7200U CPU system.
+///   Meaning you can call it several hundred times per sample.
 pub fn gain_to_db(gain: f32) -> i32 {
     // Decibels are defined as 10*log(gain^2). Because of the squaring, gain_to_db(g) = gain_to_db(-g).
     let gain = gain.abs();
@@ -476,6 +505,7 @@ mod tests {
 
     #[test]
     fn gain_to_db_is_performant() {
+        // to be honest, it is not faster than `log10()`...
         const SAMPLE_RATE: usize = 48_000;
         const TEST_DURATION_SECONDS: usize = 3600;
         const ITERS: usize = SAMPLE_RATE * TEST_DURATION_SECONDS;
