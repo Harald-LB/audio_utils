@@ -9,6 +9,7 @@
 //! of parallel instances in typical audio workloads.
 pub struct TinySmoother {
     last_value: f64,
+    start_value: f32,
     beta: f64,
 }
 
@@ -16,13 +17,15 @@ impl Default for TinySmoother {
     /// Creates a smoother with ~10ms half-life at common audio sample rates.
     ///
     /// The default configuration reaches 50% of the target value after approximately
-    /// 500 samples, which corresponds to ~10ms at 48 kHz or ~11ms at 44.1kHz.
+    /// 500 samples, which corresponds to ~10ms at 48 kHz or ~11ms at 44.1 kHz.
+    /// 
+    /// The default configuration starts at 0.0 (silence).
     fn default() -> TinySmoother {
         // Beta calculation for 500-sample half-life:
         // At sample n=500, we want output = 0.5 * target
         // This gives us: beta = e^(-ln(2)/500)
         let beta = (-2.0_f64.ln() / 500.0).exp();
-        TinySmoother::new(beta)
+        TinySmoother::new(beta, 0.0)
     }
 }
 
@@ -38,10 +41,13 @@ impl TinySmoother {
     /// To calculate beta for a specific time constant:
     /// * For 50% at n samples: `beta = e^(-ln(2)/n)`
     /// * For 63.2% at n samples: `beta = e^(-1/n)`
-    pub fn new(beta: f64) -> TinySmoother {
+    /// 
+    /// * `start_value` - the value, the smoother should start from when reset (usually 0.0 or 1.0)
+    pub fn new(beta: f64, start_value: f32) -> TinySmoother {
         TinySmoother {
-            last_value: 0.0,
+            last_value: start_value as f64,
             beta,
+            start_value,
         }
     }
 
@@ -63,6 +69,10 @@ impl TinySmoother {
         let new_value = target - self.beta * (target - self.last_value);
         self.last_value = new_value;
         new_value as f32
+    }
+    /// 
+    pub fn reset(&mut self) {
+        self.last_value = self.start_value as f64;
     }
 }
 
