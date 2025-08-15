@@ -1,20 +1,30 @@
 //! Utilities for working with decibels (dB) and linear gains (gain).
 //!
-//! This module provides functions for converting between decibels (dB) and linear gains (gain).
+//! This module provides functions for converting between decibels (dB) and linear gains 
+//! called _volts_ in analogy electronics.
+//!
+//! # Usage
+//!
+//! ```
+//! use audio_utils::db_to_volt;
+//!
+//! let decibels:i32 = -60;
+//! let voltage = db_to_volt(decibels);
+//! ```
 //!
 //! # Examples
 //!
 //! ```
-//! use audio_utils::DbToGain;
+//! use audio_utils::DbToVolt;
 //!
 //! let decibels:i32 = -60;
-//! let gain = decibels.to_gain();
+//! let voltage = decibels.to_volt();
 //! ```
 
 
 
 /// A static lookup table mapping integer decibel values in the range -100 to +27 dB
-/// to corresponding linear gain values (f32). The step size is exactly 1 dB,
+/// to corresponding linear gain values (Volt). The step size is exactly 1 dB,
 /// which is below the just noticeable difference (JND) for loudness at typical
 /// listening conditions (~1 dB at 500 Hz), making this resolution perceptually transparent.
 ///
@@ -23,7 +33,7 @@
 ///
 /// Values are calculated using the formula: 10^(dB/20) and represented in scientific notation
 /// for maximum precision within f32 limits.
-const DB_GAIN_LOOKUP: [f32; 128] = [
+const DB_VOLT_LOOKUP: [f32; 128] = [
     // -100 dB to -91 dB
     1.0000000e-05,
     1.1220185e-05,
@@ -167,16 +177,16 @@ const DB_GAIN_LOOKUP: [f32; 128] = [
     2.2387211e+01,
 ];
 /// Offset to convert dB values to array indices
-const DB_GAIN_LOOKUP_OFFSET: usize = 100;
+const DB_VOLT_LOOKUP_OFFSET: usize = 100;
 /// Total size of the lookup table
-const DB_GAIN_LOOKUP_SIZE: usize = DB_GAIN_LOOKUP.len();
+const DB_VOLT_LOOKUP_SIZE: usize = DB_VOLT_LOOKUP.len();
 /// Minimum supported dB value
-const DB_GAIN_LOOKUP_MIN: i32 = -(DB_GAIN_LOOKUP_OFFSET as i32);
-/// Maximum supported dB value  
-const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) as i32;
+const DB_VOLT_LOOKUP_MIN: i32 = -(DB_VOLT_LOOKUP_OFFSET as i32);
+/// Maximum supported dB value
+const DB_VOLT_LOOKUP_MAX: i32 = DB_VOLT_LOOKUP_MIN + (DB_VOLT_LOOKUP_SIZE - 1) as i32;
 
 
-/// Converts integer dB values in the range −100 to +27 into a linear gain
+/// Converts integer dB values in the range −100 to +27 into a linear gain (Volt)
 /// using a precomputed lookup table. This avoids expensive runtime calls
 /// to `powf()` in the audio processing hot path and runs ~7× faster,
 /// with precision sufficient for most practical real-time audio use cases.
@@ -191,12 +201,12 @@ const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) a
 ///
 /// # Example
 /// ```
-/// use audio_utils::db_to_gain;
+/// use audio_utils::db_to_volt;
 ///
 /// let decibels:i32 = -60;
-/// let gain = db_to_gain(decibels);
+/// let gain_volt = db_to_volt(decibels);
 ///
-/// assert_eq!(gain, 0.001);
+/// assert_eq!(gain_volt, 0.001);
 /// ```
 /// # Performance
 ///
@@ -205,54 +215,54 @@ const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) a
 ///   meaning you can call it several thousand times per sample.
 ///
 #[inline(always)]
-pub fn db_to_gain(db: i32) -> f32 {
-    let db = db.clamp(DB_GAIN_LOOKUP_MIN, DB_GAIN_LOOKUP_MAX);
-    let idx = (db + DB_GAIN_LOOKUP_OFFSET as i32) as usize;
-    DB_GAIN_LOOKUP[idx]
+pub fn db_to_volt(db: i32) -> f32 {
+    let db = db.clamp(DB_VOLT_LOOKUP_MIN, DB_VOLT_LOOKUP_MAX);
+    let idx = (db + DB_VOLT_LOOKUP_OFFSET as i32) as usize;
+    DB_VOLT_LOOKUP[idx]
 }
-/// Syntactic sugar. Instead of `db_to_gain(decibels)` you can use `decibels.to_gain()`
-pub trait DbToGain {
-    fn to_gain(self) -> f32;
+/// Syntactic sugar. Instead of `db_to_volt(decibels)` you can use `decibels.to_volt()`
+pub trait DbToVolt {
+    fn to_volt(self) -> f32;
 }
 
-impl DbToGain for i32 {
-    /// Converts a decibel value given as an i32 into a gain value.
+impl DbToVolt for i32 {
+    /// Converts a decibel value given as an i32 into a linear gain value (Volt).
     ///
     /// # Example
     /// ```
-    /// use audio_utils::DbToGain;
+    /// use audio_utils::DbToVolt;
     ///
     /// let decibels:i32 = -60;
-    /// let gain = decibels.to_gain();
+    /// let gain_volt = decibels.to_volt();
     ///
-    /// assert_eq!(gain, 1.0000000e-03f32);
+    /// assert_eq!(gain_volt, 1.0000000e-03f32);
     /// ```
     ///
     #[inline]
-    fn to_gain(self) -> f32 {
-        db_to_gain(self)
+    fn to_volt(self) -> f32 {
+        db_to_volt(self)
     }
 }
-impl DbToGain for i64 {
-    /// Converts a decibel value given as an i64 into a gain value.
+impl DbToVolt for i64 {
+    /// Converts a decibel value given as an i64 into a linear gain value (Volt).
     ///
     /// # Example
     /// ```
-    /// use audio_utils::DbToGain;
+    /// use audio_utils::DbToVolt;
     ///
     /// let decibels:i64 = -60;
-    /// let gain = decibels.to_gain();
+    /// let gain_volt = decibels.to_volt();
     ///
-    /// assert_eq!(gain, 1.0000000e-03f32);
+    /// assert_eq!(gain_volt, 1.0000000e-03f32);
     /// ```
     ///
     #[inline]
-    fn to_gain(self) -> f32 {
-        db_to_gain(self as i32)
+    fn to_volt(self) -> f32 {
+        db_to_volt(self as i32)
     }
 }
-impl DbToGain for f32 {
-    /// Converts a decibel value given as a f32 into a gain value.
+impl DbToVolt for f32 {
+    /// Converts a decibel value given as a f32 into a linear gain value (Volt).
     ///
     /// Note:
     /// 1. The floating-point value is rounded to the nearest integer; there is no interpolation.
@@ -260,24 +270,24 @@ impl DbToGain for f32 {
     ///
     /// # Example
     /// ```
-    /// use audio_utils::DbToGain;
+    /// use audio_utils::DbToVolt;
     ///
     /// let decibels:f32 = -59.8; // will be rounded to -60 dB
-    /// let gain = decibels.to_gain();
+    /// let gain_volt = decibels.to_volt();
     ///
-    /// assert_eq!(gain, 1.0000000e-03f32);
+    /// assert_eq!(gain_volt, 1.0000000e-03f32);
     /// ```
     ///
     #[inline]
-    fn to_gain(self) -> f32 {
+    fn to_volt(self) -> f32 {
         if !self.is_finite() {
             return 1.0; // Unity gain as safe default
         }
-        db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
+        db_to_volt(self.clamp(-100.0, 27.0).round() as i32)
     }
 }
-impl DbToGain for f64 {
-    /// Converts a decibel value given as a f64 into a gain value.
+impl DbToVolt for f64 {
+    /// Converts a decibel value given as a f64 into a linear gain value (Volt)
     ///
     /// Note:
     /// 1. The floating-point value is rounded to the nearest integer; there is no interpolation.
@@ -285,32 +295,32 @@ impl DbToGain for f64 {
     ///
     /// # Example
     /// ```
-    /// use audio_utils::DbToGain;
+    /// use audio_utils::DbToVolt;
     ///
     /// let decibels:f64 = -59.8; // will be rounded to -60 dB
-    /// let gain = decibels.to_gain();
+    /// let gain_volt = decibels.to_volt();
     ///
-    /// assert_eq!(gain, 1.0000000e-03f32);
+    /// assert_eq!(gain_volt, 1.0000000e-03f32);
     /// ```
     ///
     #[inline]
-    fn to_gain(self) -> f32 {
+    fn to_volt(self) -> f32 {
         if !self.is_finite() {
             return 1.0; // Unity gain as safe default
         }
-        db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
+        db_to_volt(self.clamp(-100.0, 27.0).round() as i32)
     }
 }
 
 /// Converts a linear gain factor back into an approximate integer decibel value.
-/// Performs a binary search on the same precomputed `DB_GAIN_LOOKUP` table used by `db_to_gain()`.
+/// Performs a binary search on the same precomputed `DB_VOLT_LOOKUP` table used by `db_to_volt()`.
 ///
-/// This function guarantees that `gain_to_db(db_to_gain(given_db))` yields the `given_db` value
+/// This function guarantees that `volt_to_db(db_to_volt(given_db))` yields the `given_db` value
 /// (the round trip is stable).
 ///
 /// # Arguments
 ///
-/// * `gain` - A linear gain value (f32). Values below the minimum map to -100 dB. Values above
+/// * `gain_volt` - A linear gain value (f32). Values below the minimum map to -100 dB. Values above
 ///            maximum map to +27 dB.
 ///
 /// # Returns
@@ -319,43 +329,44 @@ impl DbToGain for f64 {
 ///
 /// # Example
 /// ```
-/// use audio_utils::gain_to_db;
+/// use audio_utils::volt_to_db;
 ///
 /// let gain:f32 = 0.001;
-/// let decibels = gain_to_db(gain);
+/// let decibels = volt_to_db(gain);
 ///
 /// assert_eq!(decibels, -60);
 /// ```
 /// # Performance
 ///
-/// To be honest, the performance of `gain_to_db` is not better than `log10()` even on a small
+/// To be honest, the performance of `volt_to_db` is not better than `log10()` even on a small
 /// system. But it still might be useful where you need the round-trip stability of
-/// `gain_to_db(db_to_gain(given_db))`.
+/// `volt_to_db(db_to_volt
+/// (given_db))`.
 ///
 /// - The lookup table iteration is about _1.26_ times _faster_ than `log10()`
 /// - The lookup table iteration has a realtime factor of __1865__ at a sample rate of 48 kHz, on a
 ///   small Intel® Core™ i5-7200U CPU system.
 ///   Meaning you can call it several hundred times per sample.
-pub fn gain_to_db(gain: f32) -> i32 {
-    // Decibels are defined as 10*log(gain^2). Because of the squaring, gain_to_db(g) = gain_to_db(-g).
-    let gain = gain.abs();
+pub fn volt_to_db(gain_volt: f32) -> i32 {
+    // Decibels are defined as 10*log(gain^2). Because of the squaring, volt_to_db(g) = volt_to_db(-g).
+    let gain_volt = gain_volt.abs();
 
     // shortcut (and clamping) for small values
-    if gain <= DB_GAIN_LOOKUP[0] {
-        return DB_GAIN_LOOKUP_MIN;
+    if gain_volt <= DB_VOLT_LOOKUP[0] {
+        return DB_VOLT_LOOKUP_MIN;
     }
 
     // shortcut (and clamping) for large values
-    if gain >= DB_GAIN_LOOKUP[DB_GAIN_LOOKUP_SIZE - 1] {
-        return DB_GAIN_LOOKUP_MAX;
+    if gain_volt >= DB_VOLT_LOOKUP[DB_VOLT_LOOKUP_SIZE - 1] {
+        return DB_VOLT_LOOKUP_MAX;
     }
 
     let mut low = 0;
-    let mut high = DB_GAIN_LOOKUP_SIZE - 1;
+    let mut high = DB_VOLT_LOOKUP_SIZE - 1;
 
     while low < high {
         let mid = (low + high) / 2;
-        if DB_GAIN_LOOKUP[mid] < gain {
+        if DB_VOLT_LOOKUP[mid] < gain_volt {
             low = mid + 1;
         } else {
             high = mid;
@@ -364,9 +375,9 @@ pub fn gain_to_db(gain: f32) -> i32 {
 
     let idx = if low > 0 {
         // Pick the closer of low and low-1
-        let lo = DB_GAIN_LOOKUP[low];
-        let hi = DB_GAIN_LOOKUP[low - 1];
-        if (gain - hi).abs() < (gain - lo).abs() {
+        let lo = DB_VOLT_LOOKUP[low];
+        let hi = DB_VOLT_LOOKUP[low - 1];
+        if (gain_volt - hi).abs() < (gain_volt - lo).abs() {
             low - 1
         } else {
             low
@@ -375,19 +386,19 @@ pub fn gain_to_db(gain: f32) -> i32 {
         low
     };
 
-    (idx as i32) + DB_GAIN_LOOKUP_MIN
+    (idx as i32) + DB_VOLT_LOOKUP_MIN
 }
 /// Syntactic sugar. Instead of `gain_to_db(gain)` you can use `gain.to_db()`
-pub trait GainToDb {
+pub trait VoltToDb {
     fn to_db(self) -> i32;
 }
-impl GainToDb for f32 {
+impl VoltToDb for f32 {
     /// Converts a gain value given as a f32 into a decibel value.
     /// Note: Returns the nearest integer dB value from the lookup table.
     ///
     /// # Example
     /// ```
-    /// use audio_utils::GainToDb;
+    /// use audio_utils::VoltToDb;
     ///
     /// let gain:f32 = 0.001;
     /// let decibels = gain.to_db();
@@ -400,19 +411,19 @@ impl GainToDb for f32 {
         if !self.is_finite() {
             return -100; // Minimum as safe default
         }
-        gain_to_db(self)
+        volt_to_db(self)
     }
 }
-impl GainToDb for f64 {
+impl VoltToDb for f64 {
     /// Converts a gain value given as a f64 into a decibel value.
     /// Note: Returns the nearest integer dB value from the lookup table.
     ///
     /// # Example
     /// ```
-    /// use audio_utils::GainToDb;
+    /// use audio_utils::VoltToDb;
     ///
-    /// let gain:f64 = 0.001;
-    /// let decibels = gain.to_db();
+    /// let gain_volt:f64 = 0.001;
+    /// let decibels = gain_volt.to_db();
     ///
     /// assert_eq!(decibels, -60);
     /// ```
@@ -422,7 +433,7 @@ impl GainToDb for f64 {
         if !self.is_finite() {
             return -100; // Minimum as safe default
         }
-        gain_to_db(self as f32)
+        volt_to_db(self as f32)
     }
 }
 
@@ -433,16 +444,16 @@ mod tests {
     use super::*;
     use std::hint::black_box;
 
-    //--- db_to_gain
+    //--- db_to_volt
     #[test]
-    fn db_to_gain_for_unity_gain_is_exact() {
-        assert_eq!(db_to_gain(0), 1.0);
+    fn db_to_volt_for_unity_gain_is_exact() {
+        assert_eq!(db_to_volt(0), 1.0);
     }
     #[test]
-    fn db_to_gain_delivers_correct_values() {
+    fn db_to_volt_delivers_correct_values() {
         for db in -100..=27 {
             let expected = 10.0_f32.powf(db as f32 / 20.0);
-            let actual = db_to_gain(db);
+            let actual = db_to_volt(db);
 
             // verify that the values differ by at most 0.01%
             let ratio = expected / actual;
@@ -450,66 +461,66 @@ mod tests {
         }
     }
     #[test]
-    fn db_to_gain_clamps_values() {
-        assert_eq!(db_to_gain(-101), 1.0000000e-05);
-        assert!(db_to_gain(28) > 20.0);
+    fn db_to_volt_clamps_values() {
+        assert_eq!(db_to_volt(-101), 1.0000000e-05);
+        assert!(db_to_volt(28) > 20.0);
     }
 
-    //--- Edge case tests for DbToGain trait
+    //--- Edge case tests for DbTovolt trait
     #[test]
-    fn db_to_gain_handles_nan_f32() {
+    fn db_to_volt_handles_nan_f32() {
         let nan_db = f32::NAN;
-        let result = nan_db.to_gain();
+        let result = nan_db.to_volt();
         assert_eq!(result, 1.0); // Should return unity gain
     }
 
     #[test]
-    fn db_to_gain_handles_infinity_f32() {
+    fn db_to_volt_handles_infinity_f32() {
         let inf_db = f32::INFINITY;
         let neg_inf_db = f32::NEG_INFINITY;
-        assert_eq!(inf_db.to_gain(), 1.0); // Should return unity gain
-        assert_eq!(neg_inf_db.to_gain(), 1.0); // Should return unity gain
+        assert_eq!(inf_db.to_volt(), 1.0); // Should return unity gain
+        assert_eq!(neg_inf_db.to_volt(), 1.0); // Should return unity gain
     }
 
     #[test]
-    fn db_to_gain_handles_nan_f64() {
+    fn db_to_volt_handles_nan_f64() {
         let nan_db = f64::NAN;
-        let result = nan_db.to_gain();
+        let result = nan_db.to_volt();
         assert_eq!(result, 1.0); // Should return unity gain
     }
 
     #[test]
-    fn db_to_gain_handles_infinity_f64() {
+    fn db_to_volt_handles_infinity_f64() {
         let inf_db = f64::INFINITY;
         let neg_inf_db = f64::NEG_INFINITY;
-        assert_eq!(inf_db.to_gain(), 1.0); // Should return unity gain
-        assert_eq!(neg_inf_db.to_gain(), 1.0); // Should return unity gain
+        assert_eq!(inf_db.to_volt(), 1.0); // Should return unity gain
+        assert_eq!(neg_inf_db.to_volt(), 1.0); // Should return unity gain
     }
 
-    //--- Edge case tests for GainToDb trait
+    //--- Edge case tests for voltToDb trait
     #[test]
-    fn gain_to_db_handles_nan_f32() {
+    fn volt_to_db_handles_nan_f32() {
         let nan_gain = f32::NAN;
         let result = nan_gain.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
 
     #[test]
-    fn gain_to_db_handles_infinity_f32() {
+    fn volt_to_db_handles_infinity_f32() {
         let inf_gain = f32::INFINITY;
         let result = inf_gain.to_db();
         assert_eq!(result, -100); // Should return minimum dB (because infinity.is_finite() is false)
     }
 
     #[test]
-    fn gain_to_db_handles_zero() {
+    fn volt_to_db_handles_zero() {
         let zero_gain = 0.0f32;
         let result = zero_gain.to_db();
         assert_eq!(result, -100); // Should clamp to the minimum
     }
 
     #[test]
-    fn gain_to_db_handles_negative_gains() {
+    fn volt_to_db_handles_negative_gains() {
         // Test that negative gains are treated the same as positive (due to abs())
         let positive = 0.5f32;
         let negative = -0.5f32;
@@ -520,14 +531,14 @@ mod tests {
     }
 
     #[test]
-    fn gain_to_db_handles_nan_f64() {
+    fn volt_to_db_handles_nan_f64() {
         let nan_gain = f64::NAN;
         let result = nan_gain.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
 
     #[test]
-    fn gain_to_db_handles_infinity_f64() {
+    fn volt_to_db_handles_infinity_f64() {
         let inf_gain = f64::INFINITY;
         let result = inf_gain.to_db();
         assert_eq!(result, -100); // Should return minimum dB
@@ -535,7 +546,7 @@ mod tests {
 
 
     #[test]
-    fn db_to_gain_is_performant() {
+    fn db_to_volt_is_performant() {
         const SAMPLE_RATE: usize = 48_000;
         const TEST_DURATION_SECONDS: usize = 3600;
         const ITERS: usize = SAMPLE_RATE * TEST_DURATION_SECONDS;
@@ -543,7 +554,7 @@ mod tests {
         let start = std::time::Instant::now();
         for i in 0..ITERS {
             let db = ((i as i32) % 120) - 100;
-            let out = db_to_gain(db);
+            let out = db_to_volt(db);
             // Prevent dead code elimination
             black_box(out);
         }
@@ -554,54 +565,54 @@ mod tests {
         let realtime_factor = simulated_micros as f64 / elapsed_micros as f64;
 
         println!(
-            "Realtime factor: {:.0}x (could run ~{:.0} db_to_gain() in parallel)",
+            "Realtime factor: {:.0}x (could run ~{:.0} db_to_volt() in parallel)",
             realtime_factor, realtime_factor
         );
     }
 
-    //--- gain_to_db
+    //--- volt_to_db
     #[test]
-    fn gain_to_db_for_unity_gain_is_exact() {
-        assert_eq!(gain_to_db(1.0), 0);
+    fn volt_to_db_for_unity_gain_is_exact() {
+        assert_eq!(volt_to_db(1.0), 0);
     }
 
     #[test]
-    fn db_to_gain_and_gain_to_db_are_inverse_functions() {
-        for given_db in DB_GAIN_LOOKUP_MIN..=DB_GAIN_LOOKUP_MAX {
-            let actual_db = gain_to_db(db_to_gain(given_db));
+    fn db_to_volt_and_volt_to_db_are_inverse_functions() {
+        for given_db in DB_VOLT_LOOKUP_MIN..=DB_VOLT_LOOKUP_MAX {
+            let actual_db = volt_to_db(db_to_volt(given_db));
             assert_eq!(actual_db, given_db);
         }
     }
 
     #[test]
-    fn gain_to_db_accepts_negative_values() {
+    fn volt_to_db_accepts_negative_values() {
         let a_gain = 0.12345f32;
-        assert_eq!(gain_to_db(a_gain), gain_to_db(-a_gain));
+        assert_eq!(volt_to_db(a_gain), volt_to_db(-a_gain));
     }
 
     #[test]
-    fn gain_to_db_clamps_small_values() {
+    fn volt_to_db_clamps_small_values() {
         let a_gain = f32::MIN_POSITIVE;
-        assert_eq!(gain_to_db(a_gain), DB_GAIN_LOOKUP_MIN);
+        assert_eq!(volt_to_db(a_gain), DB_VOLT_LOOKUP_MIN);
     }
 
     #[test]
-    fn gain_to_db_clamps_large_values() {
+    fn volt_to_db_clamps_large_values() {
         let a_gain = f32::MAX;
-        assert_eq!(gain_to_db(a_gain), DB_GAIN_LOOKUP_MAX);
+        assert_eq!(volt_to_db(a_gain), DB_VOLT_LOOKUP_MAX);
     }
     #[test]
-    fn gain_to_db_rounds_to_nearest_table_value() {
+    fn volt_to_db_rounds_to_nearest_table_value() {
         let a_gain_above = 1.0001f32;
-        assert_eq!(gain_to_db(a_gain_above), 0);
+        assert_eq!(volt_to_db(a_gain_above), 0);
 
         let a_gain_below = 0.9999f32;
-        assert_eq!(gain_to_db(a_gain_below), 0);
+        assert_eq!(volt_to_db(a_gain_below), 0);
     }
 
     #[test]
     #[ignore = "Performance benchmark - run with cargo test -- --ignored"]
-    fn gain_to_db_is_performant() {
+    fn volt_to_db_is_performant() {
         // to be honest, it is not faster than `log10()`...
         const SAMPLE_RATE: usize = 48_000;
         const TEST_DURATION_SECONDS: usize = 3600;
@@ -609,7 +620,7 @@ mod tests {
 
         let start = std::time::Instant::now();
         for _ in 0..ITERS {
-            let out = gain_to_db(black_box(3.1622777e-03));
+            let out = volt_to_db(black_box(3.1622777e-03));
             // Prevent dead code elimination
             black_box(out);
         }
@@ -620,14 +631,14 @@ mod tests {
         let realtime_factor = simulated_micros as f64 / elapsed_micros as f64;
 
         println!(
-            "Realtime factor: {:.0}x (could run ~{:.0} gain_to_db() in parallel)",
+            "Realtime factor: {:.0}x (could run ~{:.0} volt_to_db() in parallel)",
             realtime_factor, realtime_factor
         );
     }
 
     #[test]
     #[ignore = "Performance benchmark - run with cargo test -- --ignored"]
-    fn gain_to_db_calculated_is_performant() {
+    fn volt_to_db_calculated_is_performant() {
         const SAMPLE_RATE: usize = 48_000;
         const TEST_DURATION_SECONDS: usize = 3600;
         const ITERS: usize = SAMPLE_RATE * TEST_DURATION_SECONDS;
@@ -646,7 +657,7 @@ mod tests {
         let realtime_factor = simulated_micros as f64 / elapsed_micros as f64;
 
         println!(
-            "Realtime factor: {:.0}x (could run ~{:.0} gain_to_db() in parallel)",
+            "Realtime factor: {:.0}x (could run ~{:.0} volt_to_db() in parallel)",
             realtime_factor, realtime_factor
         );
     }

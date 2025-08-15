@@ -3,7 +3,7 @@
 //! It demonstrates the use of `audio_utils::{DbToGain, TinySmoother}`.
 //! 
 
-use audio_utils::{DbToGain, TinySmoother};
+use audio_utils::{DbToVolt, TinySmoother};
 use nih_plug::prelude::*;
 use std::sync::Arc;
 
@@ -77,14 +77,14 @@ impl Plugin for TinyGainPlug {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
        
-        let gain_linear = self.params.gain_db.value().to_gain();
+        let voltage_ratio = self.params.gain_db.value().to_volt();
 
         for channel_samples in buffer.iter_samples() {
             // Use TinySmoother to smooth the gain value across all samples.
-            let gain_sample = self.smoother.next(gain_linear);
+            let smoothed_voltage = self.smoother.next(voltage_ratio);
 
             for sample in channel_samples {
-                *sample *= gain_sample;
+                *sample *= smoothed_voltage;
             }
         }
 
