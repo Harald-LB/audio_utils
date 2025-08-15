@@ -449,7 +449,7 @@ mod tests {
         assert_eq!(db_to_gain(-101), 1.0000000e-05);
         assert!(db_to_gain(28) > 20.0);
     }
-    
+
     //--- Edge case tests for DbToGain trait
     #[test]
     fn db_to_gain_handles_nan_f32() {
@@ -527,7 +527,7 @@ mod tests {
         let result = inf_gain.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
-    
+
 
     #[test]
     fn db_to_gain_is_performant() {
@@ -595,6 +595,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Performance benchmark - run with cargo test -- --ignored"]
     fn gain_to_db_is_performant() {
         // to be honest, it is not faster than `log10()`...
         const SAMPLE_RATE: usize = 48_000;
@@ -620,6 +621,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Performance benchmark - run with cargo test -- --ignored"]
     fn gain_to_db_calculated_is_performant() {
         const SAMPLE_RATE: usize = 48_000;
         const TEST_DURATION_SECONDS: usize = 3600;

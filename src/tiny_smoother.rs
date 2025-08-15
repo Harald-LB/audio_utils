@@ -8,8 +8,11 @@
 //! Benchmarks show a __~4000x real-time factor__ on modern CPUs, allowing thousands
 //! of parallel instances in typical audio workloads.
 pub struct TinySmoother {
+    /// Current filtered value (f64 for numerical stability)
     last_value: f64,
+    /// Value to reset to
     start_value: f32,
+    /// Smoothing coefficient in range [0.0, 1.0)
     beta: f64,
 }
 
@@ -36,13 +39,18 @@ impl TinySmoother {
     /// * `beta` - Smoothing coefficient in range (0.0, 1.0)
     ///   - Values near 0.0 give instant response (no smoothing)
     ///   - Values near 1.0 give slower smoothing
-    ///   - Values equal or greater 1.0 are instable
+    ///   - Values equal to or greater than 1.0 are unstable
     ///
     /// To calculate beta for a specific time constant:
     /// * For 50% at n samples: `beta = e^(-ln(2)/n)`
     /// * For 63.2% at n samples: `beta = e^(-1/n)`
     ///
-    /// * `start_value` - the value, the smoother should start from when reset (usually 0.0 or 1.0)
+    /// * `start_value` - the value the smoother should start from when reset (usually 0.0 or 1.0)
+    /// 
+    /// # Panics
+    ///
+    /// Panics if `beta` is not in range [0.0, 1.0) or if `start_value` is not finite.
+    /// 
     pub fn new(beta: f64, start_value: f32) -> TinySmoother {
         assert!(
             beta >= 0.0 && beta < 1.0,
@@ -83,29 +91,28 @@ impl TinySmoother {
         self.last_value = new_value;
         new_value as f32
     }
-    /// Resets the internal value of the smoother to its initial starting value.
+    /// Resets the smoother to its starting value.
     ///
+    /// The starting value is determined at creation time:
+    /// - Via `TinySmoother::new()` where it's explicitly specified
+    /// - Via `TinySmoother::default()` where it defaults to 0.0
     ///
     /// # Example
     /// ```
     /// use audio_utils::TinySmoother;
     ///
     /// let mut smoother = TinySmoother::default();
-    /// // let it run for 500 samples
+    /// // Run for 500 samples
     /// for _ in 0..500 {
     ///     smoother.next(1.0);
     /// }
-    /// // now the value should be close to 0.5
-    /// assert!( smoother.next(1.0) > 0.499);
+    /// // Now the value should be close to 0.5
+    /// assert!(smoother.next(1.0) > 0.499);
     ///
     /// smoother.reset();
-    /// // after reset, the value should be close to 0.0
+    /// // After reset, the value should be close to 0.0
     /// assert!(smoother.next(1.0) < 0.01);
     /// ```
-    ///
-    /// # Notes
-    /// - Ensure that `start_value` is properly set before calling this method, as it
-    ///   directly determines the reset value.
     pub fn reset(&mut self) {
         self.last_value = self.start_value as f64;
     }
