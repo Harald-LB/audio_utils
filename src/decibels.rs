@@ -610,7 +610,7 @@ mod tests {
         let start = std::time::Instant::now();
         for _ in 0..ITERS {
             let out = gain_to_db(black_box(3.1622777e-03));
-            // … and the result is observed, no DCE
+            // Prevent dead code elimination
             black_box(out);
         }
 
@@ -636,7 +636,7 @@ mod tests {
         for _ in 0..ITERS {
             let gain:f32 = black_box(3.1622777e-03);
             let out = 20.0*gain.log10();
-            // … and the result is observed, no DCE
+            // Prevent dead code elimination
             black_box(out);
         }
 

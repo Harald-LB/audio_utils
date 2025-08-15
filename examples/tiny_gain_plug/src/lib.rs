@@ -1,6 +1,6 @@
-//! This is the a simplified version of the gain plugin example from 
+//! This is a simplified version of the gain plugin example from
 //! the [NIH-plug](https://github.com/robbert-vdh/nih-plug) documentation.
-//! It shows the application of the audio_utils::{DbToGain, TinySmoother}
+//! It demonstrates the use of `audio_utils::{DbToGain, TinySmoother}`.
 //! 
 
 use audio_utils::{DbToGain, TinySmoother};
@@ -13,7 +13,7 @@ struct TinyGainPlug {
 }
 #[derive(Params)]
 struct TinyGainParams {
-    /// We make the gain in decibels an integer between -60 and 20 dB.
+    /// The gain parameter in decibels, ranging from -60 to +20 dB.
     #[id = "gain"]
     pub gain_db: IntParam,
 }
@@ -57,8 +57,8 @@ impl Plugin for TinyGainPlug {
             ..AudioIOLayout::const_default()
         },
     ];
-    
-    // note: setting this to true will cause the audio processing cycle to be split into multiple 
+
+    // Note: Setting this to true will cause the audio processing cycle to be split into multiple
     // smaller chunks, often only 1 sample long.
     const SAMPLE_ACCURATE_AUTOMATION: bool = false;
     type SysExMessage = ();
@@ -77,11 +77,11 @@ impl Plugin for TinyGainPlug {
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
        
-        let gain_abs = self.params.gain_db.value().to_gain();
+        let gain_linear = self.params.gain_db.value().to_gain();
 
         for channel_samples in buffer.iter_samples() {
-            // using the TinySmoother to smooth the gain for each sample in all channels.
-            let gain_sample = self.smoother.next(gain_abs);
+            // Use TinySmoother to smooth the gain value across all samples.
+            let gain_sample = self.smoother.next(gain_linear);
 
             for sample in channel_samples {
                 *sample *= gain_sample;
