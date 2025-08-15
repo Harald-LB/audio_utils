@@ -1,7 +1,7 @@
 //! Utilities for working with decibels (dB) and linear gains (gain).
 //!
-//! This module provides functions for converting between decibels (dB) and linear gains 
-//! called _volts_ in analogy electronics.
+//! This module provides functions for converting between decibels (dB) and linear voltage ratios,
+//! called "volts" in analogy to electronics.
 //!
 //! # Usage
 //!
@@ -24,7 +24,7 @@
 
 
 /// A static lookup table mapping integer decibel values in the range -100 to +27 dB
-/// to corresponding linear gain values (Volt). The step size is exactly 1 dB,
+/// to corresponding linear voltage ratios (f32). The step size is exactly 1 dB,
 /// which is below the just noticeable difference (JND) for loudness at typical
 /// listening conditions (~1 dB at 500 Hz), making this resolution perceptually transparent.
 ///
@@ -186,7 +186,7 @@ const DB_VOLT_LOOKUP_MIN: i32 = -(DB_VOLT_LOOKUP_OFFSET as i32);
 const DB_VOLT_LOOKUP_MAX: i32 = DB_VOLT_LOOKUP_MIN + (DB_VOLT_LOOKUP_SIZE - 1) as i32;
 
 
-/// Converts integer dB values in the range −100 to +27 into a linear gain (Volt)
+/// Converts integer dB values in the range −100 to +27 into a linear voltage ratio
 /// using a precomputed lookup table. This avoids expensive runtime calls
 /// to `powf()` in the audio processing hot path and runs ~7× faster,
 /// with precision sufficient for most practical real-time audio use cases.
@@ -340,8 +340,7 @@ impl DbToVolt for f64 {
 ///
 /// To be honest, the performance of `volt_to_db` is not better than `log10()` even on a small
 /// system. But it still might be useful where you need the round-trip stability of
-/// `volt_to_db(db_to_volt
-/// (given_db))`.
+/// `volt_to_db(db_to_volt(given_db))`.
 ///
 /// - The lookup table iteration is about _1.26_ times _faster_ than `log10()`
 /// - The lookup table iteration has a realtime factor of __1865__ at a sample rate of 48 kHz, on a
