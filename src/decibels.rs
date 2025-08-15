@@ -499,22 +499,22 @@ mod tests {
     //--- Edge case tests for voltToDb trait
     #[test]
     fn volt_to_db_handles_nan_f32() {
-        let nan_gain = f32::NAN;
-        let result = nan_gain.to_db();
+        let nan_volt = f32::NAN;
+        let result = nan_volt.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
 
     #[test]
     fn volt_to_db_handles_infinity_f32() {
-        let inf_gain = f32::INFINITY;
-        let result = inf_gain.to_db();
+        let inf_volt = f32::INFINITY;
+        let result = inf_volt.to_db();
         assert_eq!(result, -100); // Should return minimum dB (because infinity.is_finite() is false)
     }
 
     #[test]
     fn volt_to_db_handles_zero() {
-        let zero_gain = 0.0f32;
-        let result = zero_gain.to_db();
+        let zero_volt = 0.0f32;
+        let result = zero_volt.to_db();
         assert_eq!(result, -100); // Should clamp to the minimum
     }
 
@@ -531,15 +531,15 @@ mod tests {
 
     #[test]
     fn volt_to_db_handles_nan_f64() {
-        let nan_gain = f64::NAN;
-        let result = nan_gain.to_db();
+        let nan_volt = f64::NAN;
+        let result = nan_volt.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
 
     #[test]
     fn volt_to_db_handles_infinity_f64() {
-        let inf_gain = f64::INFINITY;
-        let result = inf_gain.to_db();
+        let inf_volt = f64::INFINITY;
+        let result = inf_volt.to_db();
         assert_eq!(result, -100); // Should return minimum dB
     }
 
@@ -585,28 +585,28 @@ mod tests {
 
     #[test]
     fn volt_to_db_accepts_negative_values() {
-        let a_gain = 0.12345f32;
-        assert_eq!(volt_to_db(a_gain), volt_to_db(-a_gain));
+        let voltage = 0.12345f32;
+        assert_eq!(volt_to_db(voltage), volt_to_db(-voltage));
     }
 
     #[test]
     fn volt_to_db_clamps_small_values() {
-        let a_gain = f32::MIN_POSITIVE;
-        assert_eq!(volt_to_db(a_gain), DB_VOLT_LOOKUP_MIN);
+        let voltage = f32::MIN_POSITIVE;
+        assert_eq!(volt_to_db(voltage), DB_VOLT_LOOKUP_MIN);
     }
 
     #[test]
     fn volt_to_db_clamps_large_values() {
-        let a_gain = f32::MAX;
-        assert_eq!(volt_to_db(a_gain), DB_VOLT_LOOKUP_MAX);
+        let voltage = f32::MAX;
+        assert_eq!(volt_to_db(voltage), DB_VOLT_LOOKUP_MAX);
     }
     #[test]
     fn volt_to_db_rounds_to_nearest_table_value() {
-        let a_gain_above = 1.0001f32;
-        assert_eq!(volt_to_db(a_gain_above), 0);
+        let voltage_above = 1.0001f32;
+        assert_eq!(volt_to_db(voltage_above), 0);
 
-        let a_gain_below = 0.9999f32;
-        assert_eq!(volt_to_db(a_gain_below), 0);
+        let voltage_below = 0.9999f32;
+        assert_eq!(volt_to_db(voltage_below), 0);
     }
 
     #[test]
