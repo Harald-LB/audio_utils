@@ -166,14 +166,19 @@ const DB_GAIN_LOOKUP: [f32; 128] = [
     1.9952623e+01,
     2.2387211e+01,
 ];
+/// Offset to convert dB values to array indices
 const DB_GAIN_LOOKUP_OFFSET: usize = 100;
+/// Total size of the lookup table
 const DB_GAIN_LOOKUP_SIZE: usize = DB_GAIN_LOOKUP.len();
+/// Minimum supported dB value
 const DB_GAIN_LOOKUP_MIN: i32 = -(DB_GAIN_LOOKUP_OFFSET as i32);
+/// Maximum supported dB value  
 const DB_GAIN_LOOKUP_MAX: i32 = DB_GAIN_LOOKUP_MIN + (DB_GAIN_LOOKUP_SIZE - 1) as i32;
 
-/// Converts integer dB values in the range −100 to +20 into a linear gain
+
+/// Converts integer dB values in the range −100 to +27 into a linear gain
 /// using a precomputed lookup table. This avoids expensive runtime calls
-/// to `powf()` in the audio processing hot path and runs ~80×–160× faster,
+/// to `powf()` in the audio processing hot path and runs ~7× faster,
 /// with precision sufficient for most practical real-time audio use cases.
 ///
 /// # Arguments
@@ -250,8 +255,8 @@ impl DbToGain for f32 {
     /// Converts a decibel value given as a f32 into a gain value.
     ///
     /// Note:
-    /// 1. The floating point value is truncated to the nearest integer, there is no interpolation.
-    /// 2. The value is clamped to the range of [-100, 27] decibels.
+    /// 1. The floating-point value is rounded to the nearest integer; there is no interpolation.
+    /// 2. The value is clamped to the range [-100, 27] decibels.
     ///
     /// # Example
     /// ```
@@ -266,7 +271,7 @@ impl DbToGain for f32 {
     #[inline]
     fn to_gain(self) -> f32 {
         if !self.is_finite() {
-            return 1.0; // Unity gain as a secure default
+            return 1.0; // Unity gain as safe default
         }
         db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
     }
@@ -275,8 +280,8 @@ impl DbToGain for f64 {
     /// Converts a decibel value given as a f64 into a gain value.
     ///
     /// Note:
-    /// 1. The floating point value is truncated to the nearest integer, there is no interpolation.
-    /// 2. The value is clamped to the range of [-100, 27] decibels.
+    /// 1. The floating-point value is rounded to the nearest integer; there is no interpolation.
+    /// 2. The value is clamped to the range [-100, 27] decibels.
     ///
     /// # Example
     /// ```
@@ -291,7 +296,7 @@ impl DbToGain for f64 {
     #[inline]
     fn to_gain(self) -> f32 {
         if !self.is_finite() {
-            return 1.0; // Unity gain as a secure default
+            return 1.0; // Unity gain as safe default
         }
         db_to_gain(self.clamp(-100.0, 27.0).round() as i32)
     }
@@ -301,7 +306,7 @@ impl DbToGain for f64 {
 /// Performs a binary search on the same precomputed `DB_GAIN_LOOKUP` table used by `db_to_gain()`.
 ///
 /// This function guarantees that `gain_to_db(db_to_gain(given_db))` yields the `given_db` value
-/// (it is round trip is stable).
+/// (the round trip is stable).
 ///
 /// # Arguments
 ///
@@ -378,7 +383,7 @@ pub trait GainToDb {
 }
 impl GainToDb for f32 {
     /// Converts a gain value given as a f32 into a decibel value.
-    /// Note: the calculation is a crude approximation and may not be exact for most values.
+    /// Note: Returns the nearest integer dB value from the lookup table.
     ///
     /// # Example
     /// ```
@@ -393,14 +398,14 @@ impl GainToDb for f32 {
     #[inline]
     fn to_db(self) -> i32 {
         if !self.is_finite() {
-            return -100; // Minimum as a secure default
+            return -100; // Minimum as safe default
         }
         gain_to_db(self)
     }
 }
 impl GainToDb for f64 {
     /// Converts a gain value given as a f64 into a decibel value.
-    /// Note: the calculation is a crude approximation and may not be exact for most values.
+    /// Note: Returns the nearest integer dB value from the lookup table.
     ///
     /// # Example
     /// ```
@@ -415,7 +420,7 @@ impl GainToDb for f64 {
     #[inline]
     fn to_db(self) -> i32 {
         if !self.is_finite() {
-            return -100; // Minimum as a secure default
+            return -100; // Minimum as safe default
         }
         gain_to_db(self as f32)
     }
@@ -539,7 +544,7 @@ mod tests {
         for i in 0..ITERS {
             let db = ((i as i32) % 120) - 100;
             let out = db_to_gain(db);
-            // … and the result is observed, no DCE
+            // Prevent dead code elimination
             black_box(out);
         }
 
