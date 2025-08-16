@@ -9,5 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug",  features = ["assert_process_allocs"] }
-audio_utils = { path = "../.." }
+audio_utils = { git = "https://github.com/Harald-LB/audio_utils"}
 
